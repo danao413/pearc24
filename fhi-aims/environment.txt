@@ -1,4 +1,0 @@
-To create the environment:
-conda create -n <ENV_NAME> python=3.9
-conda activate <ENV_NAME>
-conda install -c conda-forge ase

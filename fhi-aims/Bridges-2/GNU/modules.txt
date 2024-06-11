@@ -1,4 +1,0 @@
-gcc/10.2.0
-openblas/0.3.12-gcc10.2.0
-openmpi/4.0.5-gcc10.2.0
-scalapack/2.1.0
