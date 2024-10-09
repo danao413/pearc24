@@ -13,7 +13,7 @@ class MoleculeDataset(InMemoryDataset):
 		self.data_path = data_path
 		self.processed_path = processed_path
 		super(MoleculeDataset, self).__init__(data_path, transform, pre_transform)
-		self.data, self.slices = torch.load(self.processed_path[0])
+		self.data, self.slices = torch.load(self.processed_paths[0])
 
 	@property 
 	def raw_file_names(self):
