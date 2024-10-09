@@ -54,10 +54,7 @@ class ALIGNN(torch.nn.Module):
 		else:
 			post_fc_dim = dim1 
 		#determine output dimension length
-		if data[0].y.ndim == 0:
-			output_dim = 1
-		else:
-			output_dim = len(data[0].y[0])
+		output_dim = 1
 
 		#set up pre-GNN dense layers
 		if pre_fc_count > 0:
