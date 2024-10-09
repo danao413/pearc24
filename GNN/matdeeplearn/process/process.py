@@ -10,8 +10,8 @@ from torch_geometric.data import Data, InMemoryDataset
 import torch_geometric.transforms as T
 from torch_geometric.utils import add_self_loops 
 
-from data_processing import *
-from dataset_processing import *
+from .data_processing import *
+from .dataset_processing import *
 
 def split_data(
 	dataset,
@@ -35,7 +35,7 @@ def split_data(
 			'unused_length: ', unused_length,
 			flush=True
 			)
-		train_dataset, val_dataset, test_dataset, unused_dataset = torch.utils.data.random_split(dataset, [train_legnth, val_length, test_length, unused_length], generator = torch.Generator().manual_seed(seed))
+		train_dataset, val_dataset, test_dataset, unused_dataset = torch.utils.data.random_split(dataset, [train_length, val_length, test_length, unused_length], generator = torch.Generator().manual_seed(seed))
 	return train_dataset, val_dataset, test_dataset
 
 def collect_data(data_path, target_data, processing_args):
@@ -52,7 +52,7 @@ def collect_data(data_path, target_data, processing_args):
 	for i in range(len(target_data)):
 		structure_id = target_data[i][0]
 		label = target_data[i][1]
-		mol_path = os.path.join(data_path, '{}.cif'.format(structure_id))
+		mol_path = os.path.join(data_path, '{}.mol'.format(structure_id))
 		mol = Chem.MolFromMolFile(mol_path, sanitize=False)
 		mol.UpdatePropertyCache(strict=False)
 		exclude_flags = 'SANITIZE_KEKULIZE'
@@ -60,11 +60,11 @@ def collect_data(data_path, target_data, processing_args):
 			Chem.SanitizeMol(mol)
 		except Chem.rdchem.AtomValenceException:
 			try:
-				Chem.SanitizeMol(mol Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES)
+				Chem.SanitizeMol(mol, Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES)
 			except Chem.rdchem.KekulizeException:
-				Chem.SanitizeMol(mol, Chem.SanitizeFlags ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
+				Chem.SanitizeMol(mol, Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
 		except:
-			Chem.SanitizeMl(mol, Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
+			Chem.SanitizeMol(mol, Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
 		smiles = Chem.MolToSmiles(mol)
 		node_feats = get_node_features(mol, vdw_range, vdw_min, cov_range, cov_min, hydrogen_list, permitted_list)
 		edge_feats = get_edge_features(mol)
@@ -89,7 +89,7 @@ def collect_data(data_path, target_data, processing_args):
 	return data_list
 
 #have to change this to match the arguments in the MatDeepLearn framework
-def process(data_path, processed_path, processing_args):
+def process_data(data_path, processed_path, processing_args):
 	processed_path = os.path.join(data_path, processed_path)
 	if not os.path.isdir(processed_path):
 		os.mkdir(processed_path)
@@ -101,7 +101,7 @@ def process(data_path, processed_path, processing_args):
 	
 	data_list = collect_data(data_path, target_data, processing_args)
 
-	full_processed_path = os.path.join(data_path, processed_path)
+	full_processed_path = processed_path
 
 	data, slices = InMemoryDataset.collate(data_list)
 	torch.save((data, slices), os.path.join(full_processed_path, 'data.pt'))
@@ -117,7 +117,7 @@ def get_dataset(data_path, target_index, reprocess='False', processing_args=None
 		sys.exit()
 
 	#for molecules, have to make sure the graph is undirected
-	transforms = T.Compoase([T.ToUndirected(), GetY(target_index)])
+	transforms = T.Compose([T.ToUndirected(), GetY(target_index)])
 
 	if reprocess == 'True':
 		os.system('rm -rf ' + os.path.join(data_path, processed_path))
