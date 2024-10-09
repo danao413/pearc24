@@ -53,10 +53,18 @@ def collect_data(data_path, target_data, processing_args):
 		structure_id = target_data[i][0]
 		label = target_data[i][1]
 		mol_path = os.path.join(data_path, '{}.cif'.format(structure_id))
-		#TODO: add in the sanitization flags
-		#TODO: do this
 		mol = Chem.MolFromMolFile(mol_path, sanitize=False)
 		mol.UpdatePropertyCache(strict=False)
+		exclude_flags = 'SANITIZE_KEKULIZE'
+		try:
+			Chem.SanitizeMol(mol)
+		except Chem.rdchem.AtomValenceException:
+			try:
+				Chem.SanitizeMol(mol Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES)
+			except Chem.rdchem.KekulizeException:
+				Chem.SanitizeMol(mol, Chem.SanitizeFlags ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
+		except:
+			Chem.SanitizeMl(mol, Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE)
 		smiles = Chem.MolToSmiles(mol)
 		node_feats = get_node_features(mol, vdw_range, vdw_min, cov_range, cov_min, hydrogen_list, permitted_list)
 		edge_feats = get_edge_features(mol)
