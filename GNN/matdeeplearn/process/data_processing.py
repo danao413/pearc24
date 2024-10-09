@@ -3,6 +3,7 @@ import numpy as np
 import os
 from rdkit import Chem
 import torch
+from torch_geometric.utils import add_self_loops
 
 def one_hot_encoding(x, permitted_list):
 	if x not in permitted_list:
