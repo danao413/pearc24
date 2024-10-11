@@ -71,10 +71,7 @@ class GATGNN(torch.nn.Module):
 		else:
 			post_fc_dim = dim1 
 
-		if data[0].y.ndim == 0:
-			output_dim = 1
-		else:
-			output_dim = len(data[0].y[0])
+		output_dim = 1
 
 		if pre_fc_count > 0:
 			self.pre_lin_list = torch.nn.ModuleList()
