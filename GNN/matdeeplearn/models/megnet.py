@@ -193,10 +193,7 @@ class MEGNet(torch.nn.Module):
         ##Determine post_fc dimension
         post_fc_dim = dim3
         ##Determine output dimension length
-        if data[0].y.ndim == 0:
-            output_dim = 1
-        else:
-            output_dim = len(data[0].y[0])
+        output_dim = 1
 
         ##Set up pre-GNN dense layers (NOTE: in v0.1 this is always set to 1 layer)
         if pre_fc_count > 0:
