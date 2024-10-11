@@ -140,7 +140,7 @@ class ALIGNN(torch.nn.Module):
 					out = self.conv_list[i](data.x, data.edge_index, data.edge_attr)
 			else:
 				if self.batch_norm == 'True':
-					out = self.conv_list[i](out, data.edge_index)
+					out = self.conv_list[i](out, data.edge_index, data.edge_attr)
 					out = self.bn_list[i](out)
 				else:
 					out = self.conv_list[i](out, data.edge_index, data.edge_attr)
@@ -173,9 +173,3 @@ class ALIGNN(torch.nn.Module):
 			return out.view(-1)
 		else:
 			return out
-
-
-
-
-
-
