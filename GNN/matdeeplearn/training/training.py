@@ -7,6 +7,7 @@ import shutil
 import copy
 import numpy as np
 from functools import partial
+from pathlib import Path
 import platform
 import json
 
@@ -20,6 +21,18 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 import torch.multiprocessing as mp
+
+#hyperopt imports
+import ray
+from ray import tune 
+from ray import train 
+from ray.tune.schedulers import ASHAScheduler
+import ray.cloudpickle as pickle 
+from ray.train import Checkpoint, get_checkpoint
+from ray.tune.search.hyperopt import HyperOptSearch
+from ray.tune.search import ConcurrencyLimiter
+from ray.tune import CLIReporter
+import tempfile
 
 ##Matdeeplearn imports
 from matdeeplearn import models
@@ -976,13 +989,15 @@ def tune_trainable(config, checkpoint_dir=None, data_path=None):
     )
 
     ##Load checkpoint
-    if checkpoint_dir:
-        model_state, optimizer_state, scheduler_state = torch.load(
-            os.path.join(checkpoint_dir, "checkpoint")
-        )
-        model.load_state_dict(model_state)
-        optimizer.load_state_dict(optimizer_state)
-        scheduler.load_state_dict(scheduler_state)
+    checkpoint = get_checkpoint()
+    if checkpoint:
+        with checkpoint.as_directory() as checkpoint_dir:
+            checkpoint_data_path = Path(checkpoint_dir) / 'data.pkl'
+            with open(checkpoint_data_path, 'rb') as fp:
+                checkpoint_state = pickle.load(fp)
+            start_epoch = checkpoint_state['epoch']
+            model.load_state_dict(checkpoint_state['net_state_dict'])
+            optimizer.load_state_dict(checkpoint_state['optimizer_state_dict'])
 
     ##Training loop
     for epoch in range(1, model_parameters["epochs"] + 1):
@@ -1008,19 +1023,12 @@ def tune_trainable(config, checkpoint_dir=None, data_path=None):
 
         ##Update to tune
         if epoch % job_parameters["hyper_iter"] == 0:
-            with tune.checkpoint_dir(step=epoch) as checkpoint_dir:
-                path = os.path.join(checkpoint_dir, "checkpoint")
-                torch.save(
-                    (
-                        model.state_dict(),
-                        optimizer.state_dict(),
-                        scheduler.state_dict(),
-                    ),
-                    path,
-                )
-            ##Somehow tune does not recognize value without *1
-            tune.report(loss=val_error.cpu().numpy() * 1)
-            # tune.report(loss=val_error)
+            with tempfile.TemporaryDirectory() as checkpoint_dir:
+                checkpoint_data_path = Path(checkpoint_dir) / 'data.pkl'
+                with open(checkpoint_data_path, 'wb') as fp:
+                    pickle.dump(checkpoint_dir, fp)
+                checkpoint = Checkpoint.from_directory(checkpoint_dir)
+                ray.train.report({'loss': val_error.cpu().numpy()}, checkpoint = checkpoint)
 
 
 # Tune setup
@@ -1031,14 +1039,6 @@ def tune_setup(
     training_parameters,
     model_parameters,
 ):
-
-    # imports
-    import ray
-    from ray import tune
-    from ray.tune.schedulers import ASHAScheduler
-    from ray.tune.search.hyperopt import HyperOptSearch
-    from ray.tune.search import ConcurrencyLimiter
-    from ray.tune import CLIReporter
 
     ray.init()
     data_path = "_"
